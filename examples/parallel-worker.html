@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>ParallelWorker</title>
+		<script src="worker-utils.js"></script>
+	</head>
+
+	<body>
+		<h1>Worker vs. ParallelWorker</h1>
+		<textarea id="log" rows="30" cols="80"></textarea>
+
+		
+		<script>
+			var numbers = [];
+			var min = 28000;
+			var max = 30000;
+			var logTextarea = document.getElementById('log');
+
+			for(var i=0; i<10; i++)
+				numbers.push(min+Math.floor(Math.random()*(max-min)));
+
+			var log = function(text) {
+				logTextarea.innerHTML += text + '\n';
+			};
+
+			var run = function(numbers, worker, callback) {
+				var count = numbers.length;
+
+				worker.addEventListener('message', function(event) {
+					log(event.data.n + ': ' + event.data.p.join(','));
+					count--;
+
+					if(count == 0)
+						callback();
+				});
+
+				for(var i=0; i<numbers.length; i++) {
+					worker.postMessage({'n':numbers[i]});
+				}				
+			};
+
+			var worker = new Worker('prime-factors-worker.js');
+			var parallelWorker = new WorkerUtils.ParallelWorker('prime-factors-worker.js', 2);
+
+			var start = Date.now();
+			run(numbers, worker, function() {
+				log('  Worker time: ' + (Date.now() - start));
+
+				start = Date.now();
+				run(numbers, parallelWorker, function() {
+					log('  ParallelWorker time: ' + (Date.now() - start));
+				});
+			})
+		</script>
+	</body>
+</html>
